@@ -8,6 +8,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 // Importation unifiée des routes
 import adminRoutes from './routes/adminRoutes.js';
 import establishmentRoutes from './routes/establishmentRoutes.js';
@@ -68,7 +71,9 @@ app.options('*', cors(corsOptions));
 app.use(handleFormData);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-
+app.use(helmet());
+app.use(compression());
+app.use(morgan('dev'));
 // Middleware pour nettoyer les IDs de requête
 app.use((req, res, next) => {
   // Nettoyer uniquement les IDs de paramètre si nécessaire
