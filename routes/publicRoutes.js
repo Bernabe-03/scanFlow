@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { 
   getPublicMenu,
@@ -15,9 +14,3 @@ router.get('/orders/:id', getOrderDetails);
 router.patch('/orders/:id/cancel', cancelOrder);
 
 export default router;
-
-
-
-
-
-

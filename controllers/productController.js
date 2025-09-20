@@ -197,24 +197,16 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 // Créer un nouveau produit avec image Cloudinary
 export const createProduct = asyncHandler(async (req, res) => {
+  try {
     const { name, description, price, allergens, stock, lowStockThreshold, category, unit } = req.body;
     
-    console.log("Données reçues pour création produit:", req.body);
-    
     if (!name || !price) {
-      res.status(400);
-      throw new Error('Le nom et le prix sont requis.');
+      return res.status(400).json({ message: 'Le nom et le prix sont requis.' });
     }
-  
-    // Validation de l'établissement
-    if (!req.user.establishment) {
-      res.status(400);
-      throw new Error("Utilisateur non associé à un établissement.");
-    }
-  
+
     const establishmentId = req.user.establishment;
-  
-    // Upload de l'image vers Cloudinary si elle existe
+
+    // Upload de l'image vers Cloudinary
     let imageUrl = null;
     if (req.file) {
       try {
@@ -222,52 +214,33 @@ export const createProduct = asyncHandler(async (req, res) => {
         imageUrl = uploadResult.secure_url;
       } catch (error) {
         console.error("Erreur upload Cloudinary:", error);
-        // Ne pas throw d'erreur ici, continuer sans image
+        return res.status(500).json({ message: "Erreur lors du téléchargement de l'image" });
       }
     }
-  
-    // Validation des types de données
+
+    // Création du produit
     const productData = {
-      name: name.toString().trim(),
-      description: description ? description.toString().trim() : '',
+      name,
+      description: description || '',
       price: parseFloat(price),
-      allergens: allergens ? allergens.toString().trim() : '',
+      allergens: allergens || '',
       stock: parseInt(stock, 10) || 0,
       lowStockThreshold: parseInt(lowStockThreshold, 10) || 5,
-      category: category ? category.toString().trim() : null,
+      category: category || null,
       unit: unit || 'pièce',
-      establishment: establishmentId
+      establishment: establishmentId,
+      image: imageUrl
     };
-  
-    // Ajouter l'URL Cloudinary si disponible
-    if (imageUrl) {
-      productData.image = imageUrl;
-    }
-  
-    // Validation des valeurs numériques
-    if (isNaN(productData.price) || productData.price < 0) {
-      res.status(400);
-      throw new Error('Prix invalide.');
-    }
-  
-    if (isNaN(productData.stock) || productData.stock < 0) {
-      res.status(400);
-      throw new Error('Stock invalide.');
-    }
-  
-    console.log("Données du produit à créer:", productData);
-    
+
     const newProduct = new Product(productData);
     const savedProduct = await newProduct.save();
     
-    console.log("Produit créé avec succès:", savedProduct);
-    
-    // Populer les données pour la réponse
-    const populatedProduct = await Product.findById(savedProduct._id)
-      .populate('establishment', 'name');
-    
-    res.status(201).json(populatedProduct);
-  });
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    console.error("Erreur création produit:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
 // FONCTIONS DE GESTION DES CATÉGORIES
 export const getCategoriesByEstablishment = asyncHandler(async (req, res) => {
     const establishmentId = req.user.establishment;
