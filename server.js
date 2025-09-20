@@ -24,7 +24,6 @@ import authRoutes from './routes/authRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
-import cloudinary from './config/cloudinary.js'; // Import de Cloudinary
 
 dotenv.config();
 
@@ -53,10 +52,7 @@ app.use((req, res, next) => {
 
 // Configuration CORS complète
 const corsOptions = {
-  origin: [
-    'https://menuscann.vercel.app',
-    'http://localhost:5173' // Garder pour le développement
-  ],
+  origin: process.env.FRONTEND_URL || 'https://menuscann.vercel.app/',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -68,6 +64,7 @@ const corsOptions = {
   optionsSuccessStatus: 200,
   preflightContinue: false
 };
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
@@ -77,7 +74,6 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(compression());
 app.use(morgan('dev'));
-
 // Middleware pour nettoyer les IDs de requête
 app.use((req, res, next) => {
   // Nettoyer uniquement les IDs de paramètre si nécessaire
@@ -91,19 +87,6 @@ app.use((req, res, next) => {
   }
   
   next();
-});
-
-// Route de test pour Cloudinary - AJOUTÉE ICI
-app.get('/api/test-cloudinary', async (req, res) => {
-  try {
-    // Test simple d'upload
-    const result = await cloudinary.uploader.upload('https://res.cloudinary.com/demo/image/upload/sample.jpg', {
-      folder: 'test'
-    });
-    res.json({ success: true, result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
 });
 
 // Routes API
@@ -224,3 +207,4 @@ async function createInitialAdmin() {
     console.error('❌ Échec de création de l\'admin initial:', err.message);
   }
 }
+

@@ -4,7 +4,6 @@ import Menu from '../models/Menu.js';
 import DailyPurchase from '../models/DailyPurchase.js';
 import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
-import { uploadToCloudinary } from '../config/cloudinary.js';
 
 // Récupérer tous les produits de l'établissement de l'utilisateur connecté
 export const getProductsByEstablishment = asyncHandler(async (req, res) => {
@@ -197,50 +196,78 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 // Créer un nouveau produit avec image Cloudinary
 export const createProduct = asyncHandler(async (req, res) => {
-  try {
     const { name, description, price, allergens, stock, lowStockThreshold, category, unit } = req.body;
     
+    console.log("Données reçues pour création produit:", req.body);
+    
     if (!name || !price) {
-      return res.status(400).json({ message: 'Le nom et le prix sont requis.' });
+      res.status(400);
+      throw new Error('Le nom et le prix sont requis.');
     }
-
+  
+    // Validation de l'établissement
+    if (!req.user.establishment) {
+      res.status(400);
+      throw new Error("Utilisateur non associé à un établissement.");
+    }
+  
     const establishmentId = req.user.establishment;
-
-    // Upload de l'image vers Cloudinary
+  
+    // Upload de l'image vers Cloudinary si elle existe
     let imageUrl = null;
     if (req.file) {
       try {
         const uploadResult = await uploadToCloudinary(req.file, `menu_digital/${establishmentId}`);
         imageUrl = uploadResult.secure_url;
       } catch (error) {
-        console.error("Erreur upload Cloudinary:", error);
-        return res.status(500).json({ message: "Erreur lors du téléchargement de l'image" });
+        console.error("Erreur lors de l'upload Cloudinary:", error);
+        res.status(500);
+        throw new Error("Erreur lors du téléchargement de l'image");
       }
     }
-
-    // Création du produit
+  
+    // Validation des types de données
     const productData = {
-      name,
-      description: description || '',
+      name: name.toString().trim(),
+      description: description ? description.toString().trim() : '',
       price: parseFloat(price),
-      allergens: allergens || '',
+      allergens: allergens ? allergens.toString().trim() : '',
       stock: parseInt(stock, 10) || 0,
       lowStockThreshold: parseInt(lowStockThreshold, 10) || 5,
-      category: category || null,
+      category: category ? category.toString().trim() : null,
       unit: unit || 'pièce',
-      establishment: establishmentId,
-      image: imageUrl
+      establishment: establishmentId
     };
-
+  
+    // Ajouter l'URL Cloudinary si disponible
+    if (imageUrl) {
+      productData.image = imageUrl;
+    }
+  
+    // Validation des valeurs numériques
+    if (isNaN(productData.price) || productData.price < 0) {
+      res.status(400);
+      throw new Error('Prix invalide.');
+    }
+  
+    if (isNaN(productData.stock) || productData.stock < 0) {
+      res.status(400);
+      throw new Error('Stock invalide.');
+    }
+  
+    console.log("Données du produit à créer:", productData);
+    
     const newProduct = new Product(productData);
     const savedProduct = await newProduct.save();
     
-    res.status(201).json(savedProduct);
-  } catch (error) {
-    console.error("Erreur création produit:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
+    console.log("Produit créé avec succès:", savedProduct);
+    
+    // Populer les données pour la réponse
+    const populatedProduct = await Product.findById(savedProduct._id)
+      .populate('establishment', 'name');
+    
+    res.status(201).json(populatedProduct);
+  });
 // FONCTIONS DE GESTION DES CATÉGORIES
 export const getCategoriesByEstablishment = asyncHandler(async (req, res) => {
     const establishmentId = req.user.establishment;
