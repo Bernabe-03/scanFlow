@@ -49,10 +49,12 @@ app.use((req, res, next) => {
   console.log(`${timestamp} - ${req.method} ${req.url}`);
   next();
 });
-
 // Configuration CORS complète
 const corsOptions = {
-  origin:  ['https://scanflow-liard.vercel.app/', 'http://localhost:5173'],
+  origin: [
+    'https://menuscann.vercel.app',
+    'http://localhost:5173' // Garder pour le développement
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -64,7 +66,6 @@ const corsOptions = {
   optionsSuccessStatus: 200,
   preflightContinue: false
 };
-
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
