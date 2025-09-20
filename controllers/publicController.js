@@ -6,7 +6,6 @@ import { Product } from '../models/Product.js';
 import Order from '../models/Order.js';
 import DailyPurchase from '../models/DailyPurchase.js';
 
-
 export const getPublicMenu = async (req, res) => {
   try {
     const code = req.params.code;
@@ -86,7 +85,6 @@ export const getPublicMenu = async (req, res) => {
     });
   }
 };
-
 export const createPublicOrder = asyncHandler(async (req, res) => {
   const { 
     items, 
@@ -186,7 +184,6 @@ export const createPublicOrder = asyncHandler(async (req, res) => {
   const savedOrder = await order.save();
   res.status(201).json(savedOrder);
 });
-
 export const getOrderDetails = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -233,7 +230,6 @@ export const getOrderDetails = async (req, res) => {
     });
   }
 };
-
 export const cancelOrder = async (req, res) => {
   try {
     const orderId = req.params.id;

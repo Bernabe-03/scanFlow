@@ -144,7 +144,6 @@ export const getActiveCashier = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur.' });
   }
 };
-
 export const toggleCashierStatus = async (req, res) => {
   try {
     const { id } = req.params;
