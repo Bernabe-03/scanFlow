@@ -335,7 +335,6 @@ export const addProductToCategory = asyncHandler(async (req, res) => {
     res.status(201).json(productToAdd);
 });
 
-
 export const linkProductToCategory = asyncHandler(async (req, res) => {
   const { categoryId } = req.params;
   const { productId, useStockData } = req.body;
