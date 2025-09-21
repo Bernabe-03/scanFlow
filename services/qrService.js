@@ -1,5 +1,3 @@
-
-// Fichier : qrService.js
 import QRCode from 'qrcode';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,10 +29,10 @@ export const generateQrForEstablishment = async (establishmentId) => {
       await establishment.save();
     }
 
-    // URL du menu public
-    const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/menu/${establishment.code}`;
+    // Modification ici : utiliser la route de redirection automatique
+    const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/q/${establishment.code}`;
     
-    // Générer le QR code en base64 (pas de fichier physique)
+    // Générer le QR code en base64
     const qrDataUrl = await QRCode.toDataURL(url, {
       width: 500,
       margin: 2,
@@ -62,4 +60,3 @@ export const getQrCode = async (code) => {
     throw error;
   }
 };
-
