@@ -51,18 +51,27 @@ app.use((req, res, next) => {
 });
 
 // Configuration CORS complète
+// const corsOptions = {
+//   origin: ['http://localhost:5173'|| 'https://menuscann.vercel.app/'],
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: [
+//     'Content-Type', 
+//     'Authorization', 
+//     'Accept',
+//     'X-Requested-With'
+//   ],
+//   optionsSuccessStatus: 200,
+//   preflightContinue: false
+// };
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://menuscann.vercel.app/',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'Accept',
-    'X-Requested-With'
+  origin: [
+    'https://menuscann.vercel.app',
+    'http://localhost:5173'
   ],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
