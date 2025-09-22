@@ -369,7 +369,6 @@ export const getOrderStats = asyncHandler(async (req, res) => {
         popularProduct: popularProduct[0] || null
     });
 });
-// Dans orderController.js
 export const getPublicOrderTracking = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     
@@ -387,25 +386,16 @@ export const getPublicOrderTracking = asyncHandler(async (req, res) => {
       throw new Error('Commande non trouvée');
     }
   
-    // Retourner les informations nécessaires au client
+    // Retourner uniquement les informations nécessaires au client
     res.json({
       id: order._id,
       status: order.status,
-      items: order.items.map(item => ({
-        name: item.product?.name || item.name,
-        price: item.price,
-        quantity: item.quantity,
-        options: item.options || []
-      })),
+      items: order.items,
       total: order.total,
       customerName: order.customerName,
       customerPhone: order.customerPhone,
-      deliveryOption: order.deliveryOption,
-      tableNumber: order.tableNumber,
-      deliveryAddress: order.deliveryAddress,
       createdAt: order.createdAt,
-      estimatedPreparationTime: order.estimatedPreparationTime,
-      cashierName: order.cashierName
+      estimatedPreparationTime: order.estimatedPreparationTime
     });
 });
 // Dans orderController.js
