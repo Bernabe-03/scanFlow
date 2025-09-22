@@ -89,7 +89,6 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 //     });
 //   }
 // });
-
 export const updateProductStock = asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;

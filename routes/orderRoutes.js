@@ -23,7 +23,7 @@ router.route('/')
 router.get('/stats', protect, managerAndCashier, getOrderStats);
 
 router.get('/public/tracking/:orderId', getPublicOrderTracking);
-
+router.post('/public', createPublicOrder);
 router.route('/daily-purchases')
   .get(protect, manager, getDailyPurchases);
 
