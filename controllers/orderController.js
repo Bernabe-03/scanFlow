@@ -379,25 +379,42 @@ export const getPublicOrderTracking = asyncHandler(async (req, res) => {
   
     const order = await Order.findById(orderId)
       .select('-internalNotes -modifiedBy -revisionHistory')
-      .populate('items.product', 'name price image');
+      .populate('items.product', 'name price image')
+      .populate('establishment', 'name');
       
     if (!order) {
       res.status(404);
       throw new Error('Commande non trouvée');
     }
   
-    // Retourner uniquement les informations nécessaires au client
+    // CORRECTION : Retourner toutes les informations nécessaires
     res.json({
       id: order._id,
       status: order.status,
-      items: order.items,
+      items: order.items.map(item => ({
+        product: {
+          name: item.product?.name || 'Produit non disponible',
+          price: item.product?.price || item.price,
+          image: item.product?.image
+        },
+        quantity: item.quantity,
+        price: item.price,
+        name: item.product?.name || 'Produit non disponible', // Ajout pour compatibilité
+        options: item.options || [] // Ajout des options si elles existent
+      })),
       total: order.total,
       customerName: order.customerName,
       customerPhone: order.customerPhone,
+      deliveryOption: order.deliveryOption,
+      deliveryAddress: order.deliveryAddress,
+      tableNumber: order.tableNumber,
+      notes: order.notes,
       createdAt: order.createdAt,
-      estimatedPreparationTime: order.estimatedPreparationTime
+      estimatedPreparationTime: order.estimatedPreparationTime,
+      cashierName: order.cashierName,
+      establishmentName: order.establishment?.name
     });
-});
+  });
 // Dans orderController.js
 export const assignCashierToOrder = asyncHandler(async (req, res) => {
     const { cashierId, cashierName } = req.body;
