@@ -87,7 +87,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
   await menu.save();
   res.status(200).json(productToUpdate);
 });
-
 export const deleteProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
   const establishmentId = req.user.establishment;
@@ -127,7 +126,6 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   await menu.save();
   res.status(200).json({ message: 'Produit retiré du menu avec succès.' });
 });
-
 // --- CONTRÔLEURS DU MANAGER ---
 export const getMenuByEstablishmentId = asyncHandler(async (req, res) => {
     const { establishmentId } = req.params;
@@ -151,7 +149,6 @@ export const getMenuByEstablishmentId = asyncHandler(async (req, res) => {
 
     res.status(200).json(menu);
 });
-
 export const createMenu = asyncHandler(async (req, res) => {
     const { establishmentId } = req.body;
 
@@ -183,7 +180,6 @@ export const createMenu = asyncHandler(async (req, res) => {
     await establishment.save();
     res.status(201).json(savedMenu);
 });
-
 export const updateMenuName = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
@@ -203,7 +199,6 @@ export const updateMenuName = asyncHandler(async (req, res) => {
 
     res.status(200).json(menu);
 });
-
 export const addCategoryToMenu = asyncHandler(async (req, res) => {
     const { establishmentId, name } = req.body;
 
@@ -224,7 +219,6 @@ export const addCategoryToMenu = asyncHandler(async (req, res) => {
     const lastCategory = menu.categories[menu.categories.length - 1];
     res.status(201).json(lastCategory);
 });
-
 export const updateCategoryInMenu = asyncHandler(async (req, res) => {
     const { categoryId } = req.params;
     const { name } = req.body;
@@ -250,7 +244,6 @@ export const updateCategoryInMenu = asyncHandler(async (req, res) => {
     await menu.save();
     res.status(200).json(category);
 });
-
 export const deleteCategoryFromMenu = asyncHandler(async (req, res) => {
     const { categoryId } = req.params;
   
@@ -282,7 +275,6 @@ export const deleteCategoryFromMenu = asyncHandler(async (req, res) => {
   
     res.status(200).json({ message: 'Catégorie et produits associés supprimés.' });
 });
-
 export const addProductToCategory = asyncHandler(async (req, res) => {
     const { categoryId } = req.params;
     const productData = req.body;
@@ -334,7 +326,6 @@ export const addProductToCategory = asyncHandler(async (req, res) => {
   
     res.status(201).json(productToAdd);
 });
-
 export const linkProductToCategory = asyncHandler(async (req, res) => {
   const { categoryId } = req.params;
   const { productId, useStockData } = req.body;
@@ -383,7 +374,6 @@ export const linkProductToCategory = asyncHandler(async (req, res) => {
     return res.status(200).json(populatedMenu);
   }
 });
-
 export const unlinkProductFromCategory = asyncHandler(async (req, res) => {
     const { categoryId, productId } = req.params;
 
@@ -419,7 +409,6 @@ export const unlinkProductFromCategory = asyncHandler(async (req, res) => {
 
     res.status(200).json(populatedMenu);
 });
-
 export const getPublicMenu = async (req, res) => {
     try {
       const code = req.params.code;

@@ -22,6 +22,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 
@@ -99,6 +100,7 @@ app.use('/api/cashier', cashierRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Gestion des dossiers uploads
