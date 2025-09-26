@@ -87,55 +87,61 @@
 // export default router;
 
 
+
+
+
+
 import express from 'express';
 import {
-    getCashiers,
-    createCashier,
-    updateCashier,
-    deleteCashier,
-    toggleCashierStatus,
-    startCashierShift,
-    endCashierShift,
-    getDisconnectedCashiers,
-    updateLastSeen, 
-    getManagerEstablishment,
-    getDashboardStats
+    getCashiers,
+    createCashier,
+    updateCashier,
+    deleteCashier,
+    toggleCashierStatus,
+    startCashierShift,
+    endCashierShift,
+    getDisconnectedCashiers,
+    updateLastSeen, 
+    getManagerEstablishment,
+    getDashboardStats
 } from '../controllers/managerController.js';
 
 import {
-    getProductsByEstablishment,
-    getProductById,
-    createProduct,
-    updateProductStock,
-    getCategoriesByEstablishment,
-    createCategory,
-    getDailyPurchases
+    getProductsByEstablishment,
+    getProductById,
+    createProduct,
+    updateProductStock,
+    getCategoriesByEstablishment,
+    createCategory,
+    getDailyPurchases
 } from '../controllers/productController.js';
+
 import {
-    getEmployees,
-    getEmployee,
-    createEmployee,
-    updateEmployee,
-    toggleEmployeeStatus,
-    deleteEmployee,
-    generateEmployeeCardPdf
+    getEmployees,
+    getEmployee,
+    createEmployee,
+    updateEmployee,
+    toggleEmployeeStatus,
+    deleteEmployee,
+    generateEmployeeCardPdf
 } from '../controllers/employeeController.js';
+
 import { authenticate, checkRole } from '../middlewares/authMiddleware.js';
 import { checkManagerPermissions } from '../middlewares/permissionMiddleware.js';
-import upload from '../config/multerConfig.js'; // Maintenu pour les routes Produits
+import upload from '../config/multerConfig.js';
 
 const router = express.Router();
 
-// Middlewares d'authentification et de permissions
+// ✅ Middlewares d'authentification et de permissions
 router.use(authenticate());
 router.use(checkRole('manager'));
 router.use(checkManagerPermissions);
 
-// Routes pour le tableau de bord et les statistiques
+// ==================== Tableau de bord & stats ====================
 router.get('/dashboard', getDashboardStats);
 router.get('/stats/daily-purchases', getDailyPurchases);
 
-// Routes pour les caissiers
+// ==================== Caissiers ====================
 router.get('/cashiers', getCashiers);
 router.post('/cashiers', createCashier);
 router.put('/cashiers/:id', updateCashier);
@@ -148,32 +154,32 @@ router.post('/cashiers/end-shift', endCashierShift);
 router.get('/cashiers/disconnected', getDisconnectedCashiers);
 router.put('/cashiers/:id/last-seen', updateLastSeen);
 
-// Routes pour les employés
+// ==================== Employés ====================
+// ⚠️ On supprime multer ici : photo = URL envoyée depuis frontend
 router.get('/employees', getEmployees);
 router.get('/employees/:id', getEmployee);
-// 🔑 CORRECTION : Suppression de upload.single('photo')
-router.post('/employees', createEmployee); 
-// 🔑 CORRECTION : Suppression de upload.single('photo')
-router.put('/employees/:id', updateEmployee); 
+router.post('/employees', createEmployee);
+router.put('/employees/:id', updateEmployee);
 router.patch('/employees/:id/status', toggleEmployeeStatus);
 router.delete('/employees/:id', deleteEmployee);
 router.get('/employees/:id/card-pdf', generateEmployeeCardPdf);
+
 // ✅ Route pour obtenir l'établissement du manager
 router.get('/establishment', getManagerEstablishment);
 
-// Routes pour les produits (gestion du stock) - Ces routes conservent Multer car elles traitent le fichier
+// ==================== Produits ====================
 router.route('/products')
-    .get(getProductsByEstablishment)
-    .post(upload.single('image'), createProduct);
+    .get(getProductsByEstablishment)
+    .post(upload.single('image'), createProduct); // ici on garde multer car produit = image directe
 
 router.route('/products/:id')
-    .get(getProductById);
+    .get(getProductById);
 
 router.patch('/products/:id/stock', updateProductStock);
 
-// Routes pour les catégories
+// ==================== Catégories ====================
 router.route('/categories')
-    .get(getCategoriesByEstablishment)
-    .post(createCategory);
+    .get(getCategoriesByEstablishment)
+    .post(createCategory);
 
 export default router;
