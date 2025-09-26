@@ -96,6 +96,9 @@ app.use(helmet());
 app.use(compression());
 app.use(morgan('dev'));
 
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
 // Middleware pour nettoyer les IDs de requête
 app.use((req, res, next) => {
   if (req.params.id && typeof req.params.id === 'string') {

@@ -40,19 +40,29 @@ export const createEmployee = async (req, res) => {
   session.startTransaction();
 
   try {
+    // ✅ Vérifier que req.body existe et est parsé
+    if (!req.body || Object.keys(req.body).length === 0) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: 'Données manquantes dans la requête' });
+    }
+
     const {
       fullName, civility, profession, maritalStatus, childrenCount,
       diploma, cmu, cni, salary, emergencyContact, cnpsNumber,
       contractType, contractDuration, contractStartDate, contractEndDate,
-      photo // ← on attend directement l'URL de l'image
+      photo // ← URL de l'image déjà uploadée
     } = req.body;
 
-    const establishment = await Establishment.findById(req.user.establishment);
-    if (!establishment) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: 'Établissement non trouvé' });
-    }
+    console.log('📥 Données reçues:', req.body); // Debug
 
+    // ✅ Validation des champs obligatoires
+    if (!fullName || !profession || !cni || !salary || !cnpsNumber) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: 'Champs obligatoires manquants',
+        required: ['fullName', 'profession', 'cni', 'salary', 'cnpsNumber']
+      });
+    }
     const existingCNI = await Employee.findOne({ cni });
     if (existingCNI) {
       await session.abortTransaction();
