@@ -50,10 +50,10 @@ export const createEmployee = async (req, res) => {
       fullName, civility, profession, maritalStatus, childrenCount,
       diploma, cmu, cni, salary, emergencyContact, cnpsNumber,
       contractType, contractDuration, contractStartDate, contractEndDate,
-      photo // ← URL de l'image déjà uploadée
+      photo
     } = req.body;
 
-    console.log('📥 Données reçues:', req.body); // Debug
+    console.log('📥 Données reçues:', req.body);
 
     // ✅ Validation des champs obligatoires
     if (!fullName || !profession || !cni || !salary || !cnpsNumber) {
@@ -63,6 +63,28 @@ export const createEmployee = async (req, res) => {
         required: ['fullName', 'profession', 'cni', 'salary', 'cnpsNumber']
       });
     }
+
+    // ✅ Vérifier si emergencyContact est déjà un objet ou une string
+    let parsedEmergencyContact = {};
+    if (emergencyContact) {
+      if (typeof emergencyContact === 'string') {
+        try {
+          parsedEmergencyContact = JSON.parse(emergencyContact);
+        } catch (error) {
+          console.warn('⚠️ Impossible de parser emergencyContact:', error);
+          parsedEmergencyContact = {};
+        }
+      } else {
+        parsedEmergencyContact = emergencyContact;
+      }
+    }
+
+    const establishment = await Establishment.findById(req.user.establishment);
+    if (!establishment) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: 'Établissement non trouvé' });
+    }
+
     const existingCNI = await Employee.findOne({ cni });
     if (existingCNI) {
       await session.abortTransaction();
@@ -80,22 +102,30 @@ export const createEmployee = async (req, res) => {
       cmu: cmu || '',
       cni,
       salary: parseFloat(salary),
-      emergencyContact: emergencyContact ? JSON.parse(emergencyContact) : {},
+      emergencyContact: parsedEmergencyContact, // ✅ Utiliser l'objet parsé
       cnpsNumber,
       contractType,
       contractDuration: contractDuration || '',
       contractStartDate,
       contractEndDate: contractEndDate || null,
-      photo: photo || '', // ← URL reçue du frontend
+      photo: photo || '',
       createdBy: req.user._id
     };
+
+    console.log('💾 Données employé à sauvegarder:', employeeData);
 
     const employee = new Employee(employeeData);
     await employee.save({ session });
 
-    const cardData = await generateEmployeeCard(employee);
-    employee.accessCard.cardImage = cardData.cardImageUrl;
-    await employee.save({ session });
+    // ✅ Générer la carte employé
+    try {
+      const cardData = await generateEmployeeCard(employee);
+      employee.accessCard.cardImage = cardData.cardImageUrl;
+      await employee.save({ session });
+    } catch (cardError) {
+      console.error('❌ Erreur génération carte:', cardError);
+      // Continuer même si la carte échoue
+    }
 
     await session.commitTransaction();
 
@@ -106,6 +136,7 @@ export const createEmployee = async (req, res) => {
     res.status(201).json(populatedEmployee);
   } catch (error) {
     await session.abortTransaction();
+    console.error('❌ Erreur complète:', error);
 
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
@@ -114,13 +145,13 @@ export const createEmployee = async (req, res) => {
 
     res.status(500).json({
       message: 'Erreur lors de la création',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   } finally {
     session.endSession();
   }
 };
-
 export const updateEmployee = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
