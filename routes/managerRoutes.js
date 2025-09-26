@@ -9,7 +9,8 @@ import {
     startCashierShift,
     endCashierShift,
     getDisconnectedCashiers,
-    updateLastSeen,
+    updateLastSeen, 
+    getManagerEstablishment,
     getDashboardStats
 } from '../controllers/managerController.js';
 
@@ -22,11 +23,18 @@ import {
     createCategory,
     getDailyPurchases
 } from '../controllers/productController.js';
-
+import {
+    getEmployees,
+    getEmployee,
+    createEmployee,
+    updateEmployee,
+    toggleEmployeeStatus,
+    deleteEmployee,
+    generateEmployeeCardPdf
+} from '../controllers/employeeController.js';
 import { authenticate, checkRole } from '../middlewares/authMiddleware.js';
 import { checkManagerPermissions } from '../middlewares/permissionMiddleware.js';
 import upload from '../config/multerConfig.js';
-
 const router = express.Router();
 
 // Middlewares d'authentification et de permissions
@@ -51,6 +59,16 @@ router.post('/cashiers/end-shift', endCashierShift);
 router.get('/cashiers/disconnected', getDisconnectedCashiers);
 router.put('/cashiers/:id/last-seen', updateLastSeen);
 
+// Routes pour les employés
+router.get('/employees', getEmployees);
+router.get('/employees/:id', getEmployee);
+router.post('/employees', upload.single('photo'), createEmployee);
+router.put('/employees/:id', upload.single('photo'), updateEmployee);
+router.patch('/employees/:id/status', toggleEmployeeStatus);
+router.delete('/employees/:id', deleteEmployee);
+router.get('/employees/:id/card-pdf', generateEmployeeCardPdf);
+// ✅ Route pour obtenir l'établissement du manager
+router.get('/establishment', getManagerEstablishment);
 // Routes pour les produits (gestion du stock)
 router.route('/products')
     .get(getProductsByEstablishment)

@@ -2,15 +2,17 @@ import express from 'express';
 import { 
   getPublicMenu,
   createPublicOrder,
-  getOrderDetails,
   cancelOrder
 } from '../controllers/publicController.js';
-
+// ✅ Importer depuis le bon contrôleur
+import { getPublicOrderTracking } from '../controllers/orderController.js';
 const router = express.Router();
-
+// Menu public
 router.get('/menu/:code', getPublicMenu);
+// Commandes publiques
 router.post('/orders', createPublicOrder);
-router.get('/orders/:id', getOrderDetails);
+// ✅ Suivi public d'une commande - CORRIGÉ
+router.get('/orders/tracking/:orderId', getPublicOrderTracking);
+// Annulation de commande publique
 router.patch('/orders/:id/cancel', cancelOrder);
-
 export default router;

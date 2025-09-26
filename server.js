@@ -11,6 +11,7 @@ import fs from 'fs';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+
 // Importation unifiée des routes
 import adminRoutes from './routes/adminRoutes.js';
 import establishmentRoutes from './routes/establishmentRoutes.js';
@@ -50,6 +51,24 @@ app.use((req, res, next) => {
   console.log(`${timestamp} - ${req.method} ${req.url}`);
   next();
 });
+
+// const corsOptions = {
+//   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : [
+//     'https://menuscann.vercel.app'
+//   ],
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: [
+//     'Content-Type', 
+//     'Authorization', 
+//     'Accept',
+//     'X-Requested-With'
+//   ],
+//   optionsSuccessStatus: 200
+// };
+
+// app.use(cors(corsOptions));
+
 const corsOptions = {
   origin: [
     'https://menuscann.vercel.app',
@@ -67,6 +86,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
 app.options('*', cors(corsOptions));
 
 app.use(handleFormData);
@@ -75,25 +95,22 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(compression());
 app.use(morgan('dev'));
+
 // Middleware pour nettoyer les IDs de requête
 app.use((req, res, next) => {
-  // Nettoyer uniquement les IDs de paramètre si nécessaire
   if (req.params.id && typeof req.params.id === 'string') {
-    // Garder seulement les caractères hexadécimaux mais préserver la longueur
     const cleaned = req.params.id.replace(/[^a-f0-9]/gi, '');
-    // Ne garder que si c'est un ObjectId valide (24 caractères)
     if (cleaned.length === 24) {
       req.params.id = cleaned;
     }
   }
-  
   next();
 });
 
-// Routes API
+// ✅ Routes API
 app.use('/api/admin', adminRoutes);
 app.use('/api/establishments', establishmentRoutes);
-app.use('/api/manager', managerRoutes);
+app.use('/api/manager', managerRoutes); // inclut déjà /employees
 app.use('/api/menu', menuRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/cashier', cashierRoutes);
@@ -209,4 +226,3 @@ async function createInitialAdmin() {
     console.error('❌ Échec de création de l\'admin initial:', err.message);
   }
 }
-

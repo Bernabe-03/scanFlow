@@ -369,52 +369,55 @@ export const getOrderStats = asyncHandler(async (req, res) => {
         popularProduct: popularProduct[0] || null
     });
 });
+// getPublicOrderTracking
 export const getPublicOrderTracking = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
-    
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      res.status(400);
-      throw new Error('ID de commande invalide');
-    }
-  
-    const order = await Order.findById(orderId)
-      .select('-internalNotes -modifiedBy -revisionHistory')
-      .populate('items.product', 'name price image')
-      .populate('establishment', 'name');
-      
-    if (!order) {
-      res.status(404);
-      throw new Error('Commande non trouvée');
-    }
-  
-    // CORRECTION : Retourner toutes les informations nécessaires
-    res.json({
-      id: order._id,
-      status: order.status,
-      items: order.items.map(item => ({
-        product: {
-          name: item.product?.name || 'Produit non disponible',
-          price: item.product?.price || item.price,
-          image: item.product?.image
-        },
-        quantity: item.quantity,
-        price: item.price,
-        name: item.product?.name || 'Produit non disponible', // Ajout pour compatibilité
-        options: item.options || [] // Ajout des options si elles existent
-      })),
-      total: order.total,
-      customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      deliveryOption: order.deliveryOption,
-      deliveryAddress: order.deliveryAddress,
-      tableNumber: order.tableNumber,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      estimatedPreparationTime: order.estimatedPreparationTime,
-      cashierName: order.cashierName,
-      establishmentName: order.establishment?.name
-    });
+  const { orderId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    res.status(400);
+    throw new Error('ID de commande invalide');
+  }
+
+  const order = await Order.findById(orderId)
+    .select('-internalNotes -modifiedBy -revisionHistory')
+    .populate('items.product', 'name price image')
+    .populate('establishment', 'name code'); // ✅ ajouter le code ici
+
+  if (!order) {
+    res.status(404);
+    throw new Error('Commande non trouvée');
+  }
+
+  // ✅ inclure le code établissement dans la réponse
+  res.json({
+    id: order._id,
+    status: order.status,
+    items: order.items.map(item => ({
+      product: {
+        _id: item.product?._id,
+        name: item.product?.name || 'Produit non disponible',
+        price: item.product?.price || item.price,
+        image: item.product?.image
+      },
+      quantity: item.quantity,
+      price: item.price,
+      options: item.options || [],
+      name: item.name || item.product?.name
+    })),
+    total: order.total,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    deliveryOption: order.deliveryOption,
+    deliveryAddress: order.deliveryAddress,
+    tableNumber: order.tableNumber,
+    notes: order.notes,
+    createdAt: order.createdAt,
+    establishmentName: order.establishment?.name,
+    establishmentCode: order.establishment?.code, // ✅ ajouté pour le menu public
+    subtotal: order.subtotal || order.total,
+    discount: order.discount || 0
   });
+});
 // Dans orderController.js
 export const assignCashierToOrder = asyncHandler(async (req, res) => {
     const { cashierId, cashierName } = req.body;

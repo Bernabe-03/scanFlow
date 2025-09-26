@@ -5,7 +5,6 @@ import mongoose from 'mongoose';
 import { Product } from '../models/Product.js';
 import Order from '../models/Order.js';
 import DailyPurchase from '../models/DailyPurchase.js';
-
 export const getPublicMenu = async (req, res) => {
   try {
     const code = req.params.code;
@@ -184,52 +183,6 @@ export const createPublicOrder = asyncHandler(async (req, res) => {
   const savedOrder = await order.save();
   res.status(201).json(savedOrder);
 });
-export const getOrderDetails = async (req, res) => {
-  try {
-    const orderId = req.params.id;
-    
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "ID de commande invalide" });
-    }
-
-    const order = await Order.findById(orderId)
-      .populate({
-        path: 'items.product',
-        select: 'name price image'
-      })
-      .populate('establishment', 'name');
-
-    if (!order) {
-      return res.status(404).json({ message: 'Commande non trouvée' });
-    }
-
-    const publicOrder = {
-      _id: order._id,
-      items: order.items.map(item => ({
-        product: {
-          name: item.product.name,
-          price: item.product.price,
-          image: item.product.image
-        },
-        quantity: item.quantity,
-        price: item.price
-      })),
-      table: order.table,
-      total: order.total,
-      status: order.status,
-      createdAt: order.createdAt,
-      establishment: order.establishment
-    };
-
-    res.status(200).json(publicOrder);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des détails de la commande:', error);
-    res.status(500).json({ 
-      message: 'Erreur interne du serveur',
-      error: error.message
-    });
-  }
-};
 export const cancelOrder = async (req, res) => {
   try {
     const orderId = req.params.id;

@@ -400,3 +400,25 @@ export const updateCashier = async (req, res) => {
       res.status(500).json({ message: 'Erreur du serveur.' });
   }
 };
+
+export const getManagerEstablishment = async (req, res) => {
+  try {
+    const establishmentId = req.user.establishment;
+    
+    if (!establishmentId) {
+      return res.status(400).json({ message: 'Manager non assigné à un établissement' });
+    }
+
+    const establishment = await Establishment.findById(establishmentId)
+      .select('_id name code address phone isActive');
+    
+    if (!establishment) {
+      return res.status(404).json({ message: 'Établissement non trouvé' });
+    }
+
+    res.status(200).json(establishment);
+  } catch (error) {
+    console.error('Erreur getManagerEstablishment:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

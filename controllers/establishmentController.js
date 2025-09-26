@@ -4,6 +4,39 @@ import Establishment from '../models/Establishment.js';
 import Menu from '../models/Menu.js';
 import { generateQrForEstablishment } from '../services/qrService.js';
 
+export const getEstablishmentDetails = async (req, res) => {
+  try {
+    // ✅ UTILISER l'ID nettoyé du middleware
+    const establishmentId = req.cleanedEstablishmentId || req.params.id;
+    
+    if (!establishmentId) {
+      return res.status(400).json({ 
+        message: "Identifiant d'établissement manquant" 
+      });
+    }
+
+    console.log('🔍 Recherche établissement avec ID:', establishmentId);
+    
+    const establishment = await Establishment.findById(establishmentId)
+      .populate('manager', 'fullName email phone')
+      .populate('menu', 'name categories');
+    
+    if (!establishment) {
+      return res.status(404).json({ 
+        message: 'Établissement non trouvé',
+        establishmentId: establishmentId
+      });
+    }
+    
+    res.json(establishment);
+  } catch (error) {
+    console.error('❌ Erreur récupération établissement:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors de la récupération',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 // Génération de codes uniques
 export const createEstablishment = async (req, res) => {
   try {
@@ -62,30 +95,6 @@ export const createEstablishment = async (req, res) => {
     });
   }
 };
-
-export const getEstablishmentDetails = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Le middleware a déjà validé l'ID, donc on peut l'utiliser directement
-    const establishment = await Establishment.findById(id)
-      .populate('manager', 'fullName email phone')
-      .populate('menu', 'name categories');
-    
-    if (!establishment) {
-      return res.status(404).json({ message: 'Établissement non trouvé' });
-    }
-    
-    res.json(establishment);
-  } catch (error) {
-    console.error('Erreur récupération établissement:', error);
-    res.status(500).json({ 
-      message: 'Erreur lors de la récupération',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
 export const updateEstablishment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -122,7 +131,6 @@ export const updateEstablishment = async (req, res) => {
     });
   }
 };
-
 export const assignMenuToEstablishment = async (req, res) => {
   try {
     const { establishmentId, menuId } = req.body;

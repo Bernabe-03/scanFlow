@@ -10,13 +10,12 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Configuration de Cloudinary avec les variables d'environnement
+// Configuration de Cloudinary avec les variables d'environnement (Vérifiez votre .env)
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
+})
 // Route pour l'upload d'image, accessible uniquement aux managers
 router.post(
   '/', 
@@ -48,6 +47,7 @@ router.post(
       res.status(201).json({ imageUrl: result.secure_url });
     } catch (error) {
       console.error('Erreur lors du téléchargement de l\'image:', error);
+      // ✅ Amélioration : Renvoie un message plus précis pour le frontend
       res.status(500).json({ message: 'Erreur lors du téléchargement de l\'image', details: error.message });
     }
   })

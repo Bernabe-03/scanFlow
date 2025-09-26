@@ -1,4 +1,3 @@
-
 import express from 'express';
 import {
   getEstablishmentDetails,
@@ -6,18 +5,18 @@ import {
   assignMenuToEstablishment
 } from '../controllers/establishmentController.js';
 import { authenticate, establishmentAccess } from '../middlewares/authMiddleware.js';
-import { cleanIds, validateObjectId } from '../middlewares/validationMiddleware.js';
+import { cleanIds, validateEstablishmentId } from '../middlewares/validationMiddleware.js';
 
 const router = express.Router();
 
-// Appliquer le middleware de nettoyage des IDs à toutes les routes
+// 🔥 CORRECTION : Appliquer le middleware de nettoyage en PREMIER
 router.use(cleanIds);
 
 // Authentification requise pour toutes les routes
 router.use(authenticate());
 
-// Middleware de validation des IDs pour les routes avec paramètre :id
-router.param('id', validateObjectId);
+// ✅ CORRECTION : Utiliser le middleware spécialisé pour les établissements
+router.param('id', validateEstablishmentId);
 
 // Routes
 router.post('/assign-menu', establishmentAccess, assignMenuToEstablishment);
