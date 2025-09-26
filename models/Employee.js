@@ -181,7 +181,6 @@ const employeeSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
-  // ✅ Ajout de la validation stricte pour éviter les champs non définis
   strict: true,
   toJSON: {
     virtuals: true,
@@ -194,59 +193,68 @@ const employeeSchema = new mongoose.Schema({
   }
 });
 
-// ✅ Middleware pré-validation pour nettoyer les données
-employeeSchema.pre('validate', function(next) {
-  // Nettoyer les chaînes de caractères
-  if (this.fullName) this.fullName = this.fullName.trim();
-  if (this.profession) this.profession = this.profession.trim();
-  if (this.cni) this.cni = this.cni.trim();
-  if (this.cnpsNumber) this.cnpsNumber = this.cnpsNumber.trim();
-  if (this.diploma) this.diploma = this.diploma.trim();
-  if (this.cmu) this.cmu = this.cmu.trim();
-  if (this.contractDuration) this.contractDuration = this.contractDuration.trim();
-  
-  // S'assurer que emergencyContact est un objet complet
-  if (!this.emergencyContact) {
-    this.emergencyContact = {};
-  }
-  if (this.emergencyContact.name) this.emergencyContact.name = this.emergencyContact.name.trim();
-  if (this.emergencyContact.phone) this.emergencyContact.phone = this.emergencyContact.phone.trim();
-  if (this.emergencyContact.relation) this.emergencyContact.relation = this.emergencyContact.relation.trim();
-  
-  next();
-});
-
-// ✅ Générer un code employé unique avec gestion d'erreur améliorée
+// ✅ CORRECTION CRITIQUE : Hook pre-save robuste pour générer le code
 employeeSchema.pre('save', async function(next) {
+  // Ne s'exécute que pour les nouveaux documents
   if (this.isNew) {
     try {
+      console.log('🔄 Génération du code employé pour establishment:', this.establishment);
+      
+      // Vérification CRITIQUE : s'assurer que l'établissement existe
+      if (!this.establishment) {
+        console.error('❌ Erreur: establishment est undefined/null');
+        return next(new Error('L\'identifiant de l\'établissement est requis'));
+      }
+
+      // Vérifier que l'établissement est un ObjectId valide
+      if (!mongoose.Types.ObjectId.isValid(this.establishment)) {
+        console.error('❌ Erreur: establishment n\'est pas un ObjectId valide:', this.establishment);
+        return next(new Error('Identifiant d\'établissement invalide'));
+      }
+
       const Establishment = mongoose.model('Establishment');
       const establishment = await Establishment.findById(this.establishment);
       
       if (!establishment) {
-        throw new Error('Établissement non trouvé');
+        console.error('❌ Erreur: Établissement non trouvé avec ID:', this.establishment);
+        return next(new Error('Établissement non trouvé'));
       }
-      
+
+      if (!establishment.code) {
+        console.error('❌ Erreur: L\'établissement n\'a pas de code:', establishment);
+        return next(new Error('L\'établissement ne possède pas de code valide'));
+      }
+
+      console.log('✅ Établissement trouvé:', establishment.name, 'Code:', establishment.code);
+
+      // Compter les employés existants pour cet établissement
       const employeesCount = await mongoose.model('Employee').countDocuments({ 
         establishment: this.establishment 
       });
       
+      console.log('📊 Nombre d\'employés existants:', employeesCount);
+
+      // Générer le code unique
       this.code = `${establishment.code}-EMP${String(employeesCount + 1).padStart(3, '0')}`;
+      console.log('✅ Code employé généré:', this.code);
       
-      // Générer numéro de carte
-      this.accessCard = this.accessCard || {};
-      this.accessCard.cardNumber = `CARD-${this.code}-${Date.now().toString().slice(-4)}`;
-      this.accessCard.issueDate = new Date();
-      this.accessCard.expirationDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-      this.accessCard.isActive = this.isActive !== false;
+      // Générer les informations de carte d'accès
+      this.accessCard = {
+        cardNumber: `CARD-${this.code}-${Date.now().toString().slice(-4)}`,
+        issueDate: new Date(),
+        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 an
+        isActive: this.isActive !== false
+      };
+
+      console.log('✅ Carte d\'accès générée:', this.accessCard.cardNumber);
       
     } catch (error) {
+      console.error('❌ Erreur critique dans le pre-save hook:', error);
       return next(error);
     }
   }
   next();
 });
-
 // ✅ Index pour améliorer les performances
 employeeSchema.index({ establishment: 1, code: 1 });
 employeeSchema.index({ cni: 1 }, { unique: true });

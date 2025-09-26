@@ -37,15 +37,19 @@ export const getEmployee = async (req, res) => {
 
 export const createEmployee = async (req, res) => {
   console.log('📥 Received request body:', req.body);
+  
+  // Démarrage d'une session transactionnelle pour assurer l'intégrité des données
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
+    // Validation de base : vérifier que des données ont été envoyées
     if (!req.body || Object.keys(req.body).length === 0) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Données manquantes dans la requête' });
     }
 
+    // Extraction des données de la requête
     const {
       fullName, civility, profession, maritalStatus, childrenCount,
       diploma, cmu, cni, salary, emergencyContact, cnpsNumber,
@@ -53,7 +57,29 @@ export const createEmployee = async (req, res) => {
       photo
     } = req.body;
 
-    console.log('📥 Données reçues avec photo URL:', { photo, ...req.body });
+    console.log('📥 Données reçues:', { fullName, cni, profession, establishment: req.user.establishment });
+
+    // ✅ VALIDATION CRITIQUE : Vérification de l'établissement de l'utilisateur
+    if (!req.user.establishment) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: 'Aucun établissement associé à votre compte utilisateur.' });
+    }
+
+    // Vérification que l'établissement existe et a un code valide
+    const establishment = await Establishment.findById(req.user.establishment).session(session);
+    if (!establishment) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: 'Établissement non trouvé' });
+    }
+
+    if (!establishment.code) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: 'L\'établissement ne possède pas de code valide. Veuillez le configurer d\'abord.' 
+      });
+    }
+
+    console.log('✅ Établissement validé:', establishment.name, 'Code:', establishment.code);
 
     // Validation des champs obligatoires
     if (!fullName || !profession || !cni || !salary || !cnpsNumber) {
@@ -64,7 +90,7 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    // ✅ Gestion robuste de emergencyContact
+    // Gestion de l'objet emergencyContact
     let parsedEmergencyContact = { name: "", phone: "", relation: "" };
     if (emergencyContact) {
       if (typeof emergencyContact === 'string') {
@@ -72,7 +98,6 @@ export const createEmployee = async (req, res) => {
           parsedEmergencyContact = JSON.parse(emergencyContact);
         } catch (error) {
           console.warn('⚠️ Impossible de parser emergencyContact:', error);
-          // Garder les valeurs par défaut
         }
       } else if (typeof emergencyContact === 'object') {
         parsedEmergencyContact = { 
@@ -83,19 +108,14 @@ export const createEmployee = async (req, res) => {
       }
     }
 
-    const establishment = await Establishment.findById(req.user.establishment);
-    if (!establishment) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: 'Établissement non trouvé' });
-    }
-
-    const existingCNI = await Employee.findOne({ cni });
+    // Vérification de l'unicité du CNI
+    const existingCNI = await Employee.findOne({ cni }).session(session);
     if (existingCNI) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Un employé avec ce CNI existe déjà' });
     }
 
-    // ✅ Conversion explicite et validation des types
+    // Préparation des données avec conversion des types
     const employeeData = {
       establishment: req.user.establishment,
       fullName: fullName ? fullName.trim() : '',
@@ -117,7 +137,7 @@ export const createEmployee = async (req, res) => {
       createdBy: req.user._id
     };
 
-    // ✅ Validation manuelle supplémentaire
+    // Validation manuelle supplémentaire
     const validationErrors = [];
     
     if (!employeeData.fullName || employeeData.fullName.trim().length < 2) {
@@ -148,37 +168,45 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    console.log('💾 Données employé finales après validation:', employeeData);
+    console.log('💾 Données employé finales:', employeeData);
+    console.log('🔍 Tentative de création avec establishment:', employeeData.establishment);
 
+    // Création et sauvegarde du nouvel employé
     const employee = new Employee(employeeData);
+    
+    // Vérification avant sauvegarde
+    console.log('🔍 Code employé avant sauvegarde:', employee.code);
+    
     await employee.save({ session });
+    console.log('✅ Employé créé avec code:', employee.code);
 
-    // ✅ Génération de la carte employé (si la fonction existe)
-    try {
-      if (typeof generateEmployeeCard === 'function') {
-        const cardData = await generateEmployeeCard(employee);
-        if (cardData && cardData.cardImageUrl) {
-          employee.accessCard.cardImage = cardData.cardImageUrl;
-          await employee.save({ session });
-        }
-      }
-    } catch (cardError) {
-      console.error('❌ Erreur génération carte (non bloquante):', cardError);
-      // Continuer même si la carte échoue
+    // Validation finale
+    if (!employee.code) {
+      throw new Error('Le code employé n\'a pas été généré lors de la sauvegarde');
     }
 
     await session.commitTransaction();
+    console.log('✅ Transaction confirmée');
 
+    // Récupération de l'employé avec les données peuplées
     const populatedEmployee = await Employee.findById(employee._id)
       .populate('establishment', 'name manager address phone')
       .populate('createdBy', 'fullName');
 
-    console.log('✅ Employé créé avec succès:', populatedEmployee._id);
+    console.log('✅ Employé créé avec succès:', populatedEmployee._id, '- Code:', populatedEmployee.code);
     
     res.status(201).json(populatedEmployee);
+
   } catch (error) {
+    // Gestion des erreurs
     await session.abortTransaction();
     console.error('❌ Erreur complète lors de la création:', error);
+
+    if (error.message.includes('Établissement non trouvé') || error.message.includes('établissement')) {
+      return res.status(400).json({ 
+        message: 'Problème avec l\'établissement: ' + error.message 
+      });
+    }
 
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => `${err.path}: ${err.message}`);
