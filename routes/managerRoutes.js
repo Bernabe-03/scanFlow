@@ -87,3 +87,4 @@ router.route('/categories')
     .post(createCategory);
 
 export default router;
+
