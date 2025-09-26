@@ -18,7 +18,7 @@ const employeeSchema = new mongoose.Schema({
   },
   civility: {
     type: String,
-    enum: ['M', 'Mme', 'Mlle'],
+    enum: ['M', 'Mme', 'Mlle', 'Mr', 'M.'],
     required: true
   },
   profession: {

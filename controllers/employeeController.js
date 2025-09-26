@@ -92,25 +92,25 @@ export const createEmployee = async (req, res) => {
     }
 
     const employeeData = {
-      establishment: req.user.establishment,
-      fullName,
-      civility,
-      profession,
-      maritalStatus,
-      childrenCount: parseInt(childrenCount) || 0,
-      diploma: diploma || '',
-      cmu: cmu || '',
-      cni,
-      salary: parseFloat(salary),
-      emergencyContact: parsedEmergencyContact, // ✅ Utiliser l'objet parsé
-      cnpsNumber,
-      contractType,
-      contractDuration: contractDuration || '',
-      contractStartDate,
-      contractEndDate: contractEndDate || null,
-      photo: photo || '',
-      createdBy: req.user._id
-    };
+            establishment: req.user.establishment,
+            fullName,
+            civility,
+            profession,
+            maritalStatus,
+            childrenCount: parseInt(childrenCount) || 0,
+            diploma: diploma || '',
+            cmu: cmu || '',
+            cni,
+            salary: parseFloat(salary),
+            emergencyContact: parsedEmergencyContact,
+            cnpsNumber,
+            contractType,
+            contractDuration: contractDuration || '',
+            contractStartDate: new Date(contractStartDate), // 👈 Conversion explicite
+            contractEndDate: contractEndDate ? new Date(contractEndDate) : null, // 👈 Conversion et gestion de null
+            photo: photo || '',
+            createdBy: req.user._id
+          };
 
     console.log('💾 Données employé à sauvegarder:', employeeData);
 
