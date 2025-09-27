@@ -9,9 +9,7 @@ const employeeSchema = new mongoose.Schema({
   code: {
     type: String,
     unique: true,
-    // ✅ CORRECTION : Retirer 'required: [true, 'Le code employé est requis']'
-    // Le code est généré dans le hook pre('save') et ne doit pas être requis à l'initialisation.
-  },
+    },
   fullName: {
     type: String,
     required: [true, 'Le nom complet est requis'],
@@ -192,75 +190,103 @@ const employeeSchema = new mongoose.Schema({
     }
   }
 });
-
 // ✅ Le hook pre-save fonctionne maintenant correctement car la validation initiale passera.
 employeeSchema.pre('save', async function(next) {
-  // Ne s'exécute que pour les nouveaux documents
-  if (this.isNew) {
-    try {
-      console.log('🔄 Génération du code employé pour establishment:', this.establishment);
-      
-      // Vérification CRITIQUE : s'assurer que l'établissement existe
-      if (!this.establishment) {
-        console.error('❌ Erreur: establishment est undefined/null');
-        return next(new Error('L\'identifiant de l\'établissement est requis'));
-      }
-
-      // Vérifier que l'établissement est un ObjectId valide
-      if (!mongoose.Types.ObjectId.isValid(this.establishment)) {
-        console.error('❌ Erreur: establishment n\'est pas un ObjectId valide:', this.establishment);
-        return next(new Error('Identifiant d\'établissement invalide'));
-      }
-
-      const Establishment = mongoose.model('Establishment');
-      const establishment = await Establishment.findById(this.establishment);
-      
-      if (!establishment) {
-        console.error('❌ Erreur: Établissement non trouvé avec ID:', this.establishment);
-        return next(new Error('Établissement non trouvé'));
-      }
-
-      if (!establishment.code) {
-        console.error('❌ Erreur: L\'établissement n\'a pas de code:', establishment);
-        return next(new Error('L\'établissement ne possède pas de code valide'));
-      }
-
-      console.log('✅ Établissement trouvé:', establishment.name, 'Code:', establishment.code);
-
-      // Compter les employés existants pour cet établissement
-      const employeesCount = await mongoose.model('Employee').countDocuments({ 
-        establishment: this.establishment 
-      });
-      
-      console.log('📊 Nombre d\'employés existants:', employeesCount);
-
-      // Générer le code unique
-      this.code = `${establishment.code}-EMP${String(employeesCount + 1).padStart(3, '0')}`;
-      console.log('✅ Code employé généré:', this.code);
-      
-      // Générer les informations de carte d'accès
-      this.accessCard = {
-        cardNumber: `CARD-${this.code}-${Date.now().toString().slice(-4)}`,
-        issueDate: new Date(),
-        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 an
-        isActive: this.isActive !== false
-      };
-
-      console.log('✅ Carte d\'accès générée:', this.accessCard.cardNumber);
-      
-    } catch (error) {
-      console.error('❌ Erreur critique dans le pre-save hook:', error);
-      return next(error);
-    }
-  }
-  next();
+    // Ne s'exécute que pour les nouveaux documents
+    if (this.isNew) {
+      try {
+        console.log('🔄 Génération du code employé (format 2 lettres + 3 chiffres)');
+        
+        // Vérification CRITIQUE : s'assurer que l'établissement existe
+        if (!this.establishment) {
+          console.error('❌ Erreur: establishment est undefined/null');
+          return next(new Error('L\'identifiant de l\'établissement est requis'));
+        }
+  
+        // Vérifier que l'établissement est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(this.establishment)) {
+          console.error('❌ Erreur: establishment n\'est pas un ObjectId valide:', this.establishment);
+          return next(new Error('Identifiant d\'établissement invalide'));
+        }
+  
+        const Establishment = mongoose.model('Establishment');
+        const establishment = await Establishment.findById(this.establishment);
+        
+        if (!establishment) {
+          console.error('❌ Erreur: Établissement non trouvé avec ID:', this.establishment);
+          return next(new Error('Établissement non trouvé'));
+        }
+  
+        console.log('✅ Établissement trouvé:', establishment.name);
+  
+        // Fonction pour générer les initiales de l'établissement
+        const generateEstablishmentInitials = (establishmentName) => {
+          if (!establishmentName) return "ET";
+          
+          const words = establishmentName.trim().split(/\s+/);
+          if (words.length >= 2) {
+            // Prendre les premières lettres des deux premiers mots
+            return words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
+          } else if (words.length === 1 && words[0].length >= 2) {
+            // Prendre les deux premières lettres si un seul mot
+            return words[0].substring(0, 2).toUpperCase();
+          } else {
+            // Fallback
+            return "ET";
+          }
+        };
+  
+        // Générer les initiales de l'établissement
+        const establishmentInitials = generateEstablishmentInitials(establishment.name);
+        console.log('✅ Initiales générées:', establishmentInitials);
+  
+        // Trouver le dernier employé de cet établissement pour la séquence
+        const lastEmployee = await mongoose.model('Employee').findOne(
+          { establishment: this.establishment },
+          {},
+          { sort: { createdAt: -1 } }
+        );
+  
+        let sequenceNumber = 1;
+        if (lastEmployee && lastEmployee.code) {
+          // Extraire le numéro de séquence du dernier code
+          const lastCode = lastEmployee.code;
+          const lastInitials = lastCode.substring(0, 2);
+          const lastNumber = parseInt(lastCode.substring(2), 10);
+          
+          // Si les initiales correspondent, incrémenter le numéro
+          if (lastInitials === establishmentInitials && !isNaN(lastNumber)) {
+            sequenceNumber = lastNumber + 1;
+          }
+        }
+  
+        // Formater le numéro sur 3 chiffres (001, 002, etc.)
+        const formattedNumber = sequenceNumber.toString().padStart(3, '0');
+        this.code = establishmentInitials + formattedNumber;
+        
+        console.log('✅ Code employé généré:', this.code);
+  
+        // Générer les informations de carte d'accès (gardez votre logique existante)
+        this.accessCard = {
+          cardNumber: `CARD-${this.code}-${Date.now().toString().slice(-4)}`,
+          issueDate: new Date(),
+          expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 an
+          isActive: this.isActive !== false
+        };
+  
+        console.log('✅ Carte d\'accès générée:', this.accessCard.cardNumber);
+      } catch (error) {
+        console.error('❌ Erreur critique dans le pre-save hook:', error);
+        return next(error);
+      }
+    }
+    next();
 });
 // ✅ Index pour améliorer les performances
 employeeSchema.index({ establishment: 1, code: 1 });
 employeeSchema.index({ cni: 1 }, { unique: true });
 employeeSchema.index({ isActive: 1 });
 employeeSchema.index({ contractStartDate: 1 });
-
 // ✅ Méthodes virtuelles pour des données calculées
 employeeSchema.virtual('age').get(function() {
   if (!this.birthDate) return null;
@@ -268,14 +294,11 @@ employeeSchema.virtual('age').get(function() {
   const birthDate = new Date(this.birthDate);
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  
   return age;
 });
-
 employeeSchema.virtual('contractStatus').get(function() {
   if (!this.contractEndDate) return 'Permanent';
   
@@ -286,5 +309,4 @@ employeeSchema.virtual('contractStatus').get(function() {
   if (endDate < new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)) return 'Bientôt expiré';
   return 'Actif';
 });
-
 export default mongoose.model('Employee', employeeSchema);

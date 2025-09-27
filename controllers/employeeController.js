@@ -3,9 +3,69 @@ import Establishment from '../models/Establishment.js';
 import mongoose from 'mongoose';
 import { generateEmployeeCard } from '../services/employeeCardService.js';
 
+// Fonction pour générer les initiales de l'établissement
+const generateEstablishmentInitials = (establishmentName) => {
+  if (!establishmentName) return "ET";
+  
+  const words = establishmentName.trim().split(/\s+/);
+  if (words.length >= 2) {
+    // Prendre les premières lettres des deux premiers mots
+    return words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
+  } else if (words.length === 1 && words[0].length >= 2) {
+    // Prendre les deux premières lettres si un seul mot
+    return words[0].substring(0, 2).toUpperCase();
+  } else {
+    // Fallback
+    return "ET";
+  }
+};
+
+// Fonction pour générer le code employé unique
+const generateEmployeeCode = async (establishmentId, session) => {
+  try {
+    // Récupérer l'établissement
+    const establishment = await Establishment.findById(establishmentId).session(session);
+    if (!establishment) {
+      throw new Error('Établissement non trouvé');
+    }
+
+    // Générer les initiales
+    const initials = generateEstablishmentInitials(establishment.name);
+    
+    // Trouver le dernier employé de cet établissement
+    const lastEmployee = await Employee.findOne({ 
+      establishment: establishmentId 
+    }).session(session).sort({ createdAt: -1 });
+
+    let sequenceNumber = 1;
+    
+    if (lastEmployee && lastEmployee.code) {
+      // Extraire le numéro de séquence du dernier code
+      const lastCode = lastEmployee.code;
+      const lastInitials = lastCode.substring(0, 2);
+      const lastNumber = parseInt(lastCode.substring(2), 10);
+      
+      // Si les initiales correspondent, incrémenter le numéro
+      if (lastInitials === initials && !isNaN(lastNumber)) {
+        sequenceNumber = lastNumber + 1;
+      }
+    }
+
+    // Formater le numéro sur 3 chiffres
+    const formattedNumber = sequenceNumber.toString().padStart(3, '0');
+    return initials + formattedNumber;
+
+  } catch (error) {
+    console.error('Erreur génération code employé:', error);
+    // Fallback avec timestamp
+    return 'ET' + Date.now().toString().slice(-3);
+  }
+};
+
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find({ establishment: req.user.establishment })
+      .populate('establishment', 'name code address phone')
       .populate('createdBy', 'fullName')
       .sort({ createdAt: -1 });
 
@@ -18,7 +78,7 @@ export const getEmployees = async (req, res) => {
 export const getEmployee = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
-      .populate('establishment', 'name manager address phone')
+      .populate('establishment', 'name code manager address phone')
       .populate('createdBy', 'fullName');
 
     if (!employee) {
@@ -38,18 +98,16 @@ export const getEmployee = async (req, res) => {
 export const createEmployee = async (req, res) => {
   console.log('📥 Received request body:', req.body);
   
-  // Démarrage d'une session transactionnelle pour assurer l'intégrité des données
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Validation de base : vérifier que des données ont été envoyées
+    // Validation de base
     if (!req.body || Object.keys(req.body).length === 0) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Données manquantes dans la requête' });
     }
 
-    // Extraction des données de la requête
     const {
       fullName, civility, profession, maritalStatus, childrenCount,
       diploma, cmu, cni, salary, emergencyContact, cnpsNumber,
@@ -59,27 +117,20 @@ export const createEmployee = async (req, res) => {
 
     console.log('📥 Données reçues:', { fullName, cni, profession, establishment: req.user.establishment });
 
-    // ✅ VALIDATION CRITIQUE : Vérification de l'établissement de l'utilisateur
+    // ✅ VALIDATION CRITIQUE : Vérification de l'établissement
     if (!req.user.establishment) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Aucun établissement associé à votre compte utilisateur.' });
     }
 
-    // Vérification que l'établissement existe et a un code valide
+    // Vérification que l'établissement existe
     const establishment = await Establishment.findById(req.user.establishment).session(session);
     if (!establishment) {
       await session.abortTransaction();
       return res.status(404).json({ message: 'Établissement non trouvé' });
     }
 
-    if (!establishment.code) {
-      await session.abortTransaction();
-      return res.status(400).json({ 
-        message: 'L\'établissement ne possède pas de code valide. Veuillez le configurer d\'abord.' 
-      });
-    }
-
-    console.log('✅ Établissement validé:', establishment.name, 'Code:', establishment.code);
+    console.log('✅ Établissement validé:', establishment.name);
 
     // Validation des champs obligatoires
     if (!fullName || !profession || !cni || !salary || !cnpsNumber) {
@@ -115,9 +166,11 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ message: 'Un employé avec ce CNI existe déjà' });
     }
 
-    // Préparation des données avec conversion des types
+    // ✅ SUPPRIMÉ : La génération du code est maintenant gérée par le hook pre-save
+    // Préparation des données (sans le code, il sera généré automatiquement)
     const employeeData = {
       establishment: req.user.establishment,
+      // Le code sera généré automatiquement par le hook pre-save
       fullName: fullName ? fullName.trim() : '',
       civility: civility || 'M',
       profession: profession ? profession.trim() : '',
@@ -169,14 +222,10 @@ export const createEmployee = async (req, res) => {
     }
 
     console.log('💾 Données employé finales:', employeeData);
-    console.log('🔍 Tentative de création avec establishment:', employeeData.establishment);
 
     // Création et sauvegarde du nouvel employé
+    // Le hook pre-save va générer automatiquement le code
     const employee = new Employee(employeeData);
-    
-    // Vérification avant sauvegarde
-    console.log('🔍 Code employé avant sauvegarde:', employee.code);
-    
     await employee.save({ session });
     console.log('✅ Employé créé avec code:', employee.code);
 
@@ -190,7 +239,7 @@ export const createEmployee = async (req, res) => {
 
     // Récupération de l'employé avec les données peuplées
     const populatedEmployee = await Employee.findById(employee._id)
-      .populate('establishment', 'name manager address phone')
+      .populate('establishment', 'name code manager address phone')
       .populate('createdBy', 'fullName');
 
     console.log('✅ Employé créé avec succès:', populatedEmployee._id, '- Code:', populatedEmployee.code);
@@ -218,10 +267,19 @@ export const createEmployee = async (req, res) => {
     }
 
     if (error.code === 11000) {
-      return res.status(400).json({ 
-        message: 'Erreur de duplication',
-        error: 'Un employé avec ce CNI existe déjà'
-      });
+      // Gestion spécifique des erreurs d'unicité
+      if (error.keyPattern && error.keyPattern.cni) {
+        return res.status(400).json({ 
+          message: 'Erreur de duplication',
+          error: 'Un employé avec ce CNI existe déjà'
+        });
+      }
+      if (error.keyPattern && error.keyPattern.code) {
+        return res.status(400).json({ 
+          message: 'Erreur de duplication',
+          error: 'Un employé avec ce code existe déjà (erreur système)'
+        });
+      }
     }
 
     res.status(500).json({
@@ -233,7 +291,6 @@ export const createEmployee = async (req, res) => {
     session.endSession();
   }
 };
-
 export const updateEmployee = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -253,6 +310,18 @@ export const updateEmployee = async (req, res) => {
 
     const updates = { ...req.body };
     console.log('📥 Mise à jour reçue:', updates);
+
+    // ✅ EMPÊCHER LA MODIFICATION DU CODE ET DE L'ÉTABLISSEMENT
+    if (updates.code) {
+      delete updates.code; // Le code ne peut pas être modifié
+    }
+    
+    if (updates.establishment && updates.establishment !== employee.establishment.toString()) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: 'La modification de l\'établissement n\'est pas autorisée.' 
+      });
+    }
 
     // ✅ Gestion robuste de emergencyContact
     if (updates.emergencyContact) {
@@ -302,7 +371,7 @@ export const updateEmployee = async (req, res) => {
       req.params.id,
       updates,
       { new: true, runValidators: true, session }
-    ).populate('establishment', 'name manager address phone')
+    ).populate('establishment', 'name code manager address phone')
      .populate('createdBy', 'fullName');
 
     if (!updatedEmployee) {
@@ -357,6 +426,7 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
+// Les autres fonctions (toggleEmployeeStatus, deleteEmployee, generateEmployeeCardPdf, testEmployeeCreation) restent identiques
 export const toggleEmployeeStatus = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -427,7 +497,7 @@ export const deleteEmployee = async (req, res) => {
 export const generateEmployeeCardPdf = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
-      .populate('establishment', 'name manager address phone');
+      .populate('establishment', 'name code manager address phone');
 
     if (!employee) {
       return res.status(404).json({ message: 'Employé non trouvé' });
@@ -459,13 +529,14 @@ export const generateEmployeeCardPdf = async (req, res) => {
   }
 };
 
-// ✅ Route de test pour le diagnostic
 export const testEmployeeCreation = async (req, res) => {
   try {
     console.log('🧪 Test endpoint called with body:', req.body);
     console.log('🧪 User:', req.user);
     
-    // Test de validation avec des données minimales
+    // Test de génération de code
+    const testCode = await generateEmployeeCode(req.user.establishment, null);
+    
     const testData = {
       fullName: 'Test Employee',
       civility: 'M',
@@ -478,15 +549,17 @@ export const testEmployeeCreation = async (req, res) => {
       contractType: 'CDI',
       contractStartDate: new Date(),
       establishment: req.user.establishment,
-      createdBy: req.user._id
+      createdBy: req.user._id,
+      code: testCode
     };
 
-    console.log('🧪 Test data:', testData);
+    console.log('🧪 Test data avec code généré:', testData);
 
     res.json({ 
       message: 'Test réussi', 
       receivedData: req.body,
       testData: testData,
+      generatedCode: testCode,
       user: { id: req.user._id, establishment: req.user.establishment },
       timestamp: new Date().toISOString()
     });
