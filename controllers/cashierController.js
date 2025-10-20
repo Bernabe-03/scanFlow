@@ -158,7 +158,30 @@ export const createOrder = async (req, res) => {
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  };  
+  }; 
+export const updateOwnLastSeen = async (req, res) => {
+    try {
+      const cashierId = req.user._id; // Récupéré du token
+  
+      const cashier = await User.findByIdAndUpdate(
+        cashierId,
+        { lastSeen: new Date() },
+        { new: true }
+      ).select('-password');
+  
+      if (!cashier) {
+        return res.status(404).json({ message: 'Caissier non trouvé' });
+      }
+  
+      res.json(cashier);
+    } catch (error) {
+      console.error('Erreur updateOwnLastSeen:', error);
+      res.status(500).json({ 
+        message: 'Erreur serveur',
+        error: error.message 
+      });
+    }
+  }; 
 export const endShift = async (req, res) => {
   try {
     const cashierId = req.user._id;

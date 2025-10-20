@@ -117,6 +117,38 @@ export const createCashier = async (req, res) => {
     res.status(500).json({ message: 'Erreur du serveur.' });
   }
 };
+// export const getLocationData = async (req, res) => {
+//   try {
+//       // Your logic to fetch location data from database
+//       const locationData = await Location.find({ establishment: req.user.establishment });
+//       res.json({
+//           success: true,
+//           data: locationData
+//       });
+//   } catch (error) {
+//       console.error('Error fetching location data:', error);
+//       res.status(500).json({
+//           success: false,
+//           message: 'Erreur lors de la récupération des données de localisation'
+//       });
+//   }
+// };
+// export const getUnits = async (req, res) => {
+//   try {
+//       // Your logic to fetch units from database
+//       const units = await Unit.find({ establishment: req.user.establishment });
+//       res.json({
+//           success: true,
+//           data: units
+//       });
+//   } catch (error) {
+//       console.error('Error fetching units:', error);
+//       res.status(500).json({
+//           success: false,
+//           message: 'Erreur lors de la récupération des unités'
+//       });
+//   }
+// };
 export const getActiveCashier = async (req, res) => {
   try {
     const establishmentId = req.user.establishment;
@@ -400,7 +432,6 @@ export const updateCashier = async (req, res) => {
       res.status(500).json({ message: 'Erreur du serveur.' });
   }
 };
-
 export const getManagerEstablishment = async (req, res) => {
   try {
     const establishmentId = req.user.establishment;

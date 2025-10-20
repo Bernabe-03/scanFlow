@@ -19,7 +19,6 @@ const generateEstablishmentInitials = (establishmentName) => {
     return "ET";
   }
 };
-
 // Fonction pour générer le code employé unique
 const generateEmployeeCode = async (establishmentId, session) => {
   try {
@@ -425,7 +424,6 @@ export const updateEmployee = async (req, res) => {
     session.endSession();
   }
 };
-
 // Les autres fonctions (toggleEmployeeStatus, deleteEmployee, generateEmployeeCardPdf, testEmployeeCreation) restent identiques
 export const toggleEmployeeStatus = async (req, res) => {
   const session = await mongoose.startSession();

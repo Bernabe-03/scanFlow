@@ -171,21 +171,18 @@ export const publicAccess = (req, res, next) => {
 };
 
 export const managerOrCashier = (req, res, next) => {
-  if (!req.user) {
-    return res
-      .status(401)
-      .json({ message: 'Utilisateur non authentifié' });
-  }
-
-  if (req.user.role !== 'manager' && req.user.role !== 'cashier') {
-    return res.status(403).json({
-      message: 'Accès réservé aux managers et caissiers',
-    });
-  }
-
-  next();
-};
-
+    if (!req.user) {
+      return res.status(401).json({ message: 'Utilisateur non authentifié' });
+    }
+  
+    if (req.user.role !== 'manager' && req.user.role !== 'cashier' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Accès réservé aux managers, caissiers et administrateurs',
+      });
+    }
+  
+    next();
+  };
 export const protect = authenticate();
 export const admin = [authenticate(), checkRole('admin')];
 export const manager = [authenticate(), checkRole('manager')];

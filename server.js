@@ -24,9 +24,12 @@ import publicRoutes from './routes/publicRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-
+import supplierRoutes from './routes/supplierRoutes.js';
+import procurementRoutes from './routes/procurementRoutes.js';
+import payslipRoutes from './routes/payslips.js';
+import expenseRoutes from './routes/expenseRoutes.js';
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
-
+import inventoryRoutes from './routes/inventoryRoutes.js';
 dotenv.config();
 
 const app = express();
@@ -113,7 +116,7 @@ app.use((req, res, next) => {
 // ✅ Routes API
 app.use('/api/admin', adminRoutes);
 app.use('/api/establishments', establishmentRoutes);
-app.use('/api/manager', managerRoutes); // inclut déjà /employees
+app.use('/api/manager', managerRoutes); 
 app.use('/api/menu', menuRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/cashier', cashierRoutes);
@@ -122,7 +125,11 @@ app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/stats', statsRoutes);
-
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/procurements', procurementRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/payslips', payslipRoutes);
 // Gestion des dossiers uploads
 const uploadsDir = path.join(process.cwd(), 'uploads');
 const qrCodesDir = path.join(process.cwd(), 'qr_codes');
