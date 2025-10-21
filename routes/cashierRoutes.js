@@ -71,7 +71,9 @@ import { checkCashierPermissions } from '../middlewares/permissionMiddleware.js'
 
 const router = express.Router();
 
-router.use(managerOrCashier);
+// ✅ CORRECTION : Utiliser le middleware cashier au lieu de checkRole('cashier')
+router.use(cashier); // Remplace authenticate() + checkRole('cashier')
+
 // Routes qui ne nécessitent PAS que le caissier soit déjà de service
 router.post('/start-shift', startShift);
 router.post('/end-shift', endShift);
