@@ -15,7 +15,6 @@ const generateToken = (user) => {
     { expiresIn: '8h' }
   );
 };
-
 export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -50,9 +49,10 @@ export const login = async (req, res) => {
     // Configuration du cookie
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production', // true en production
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 8 * 60 * 60 * 1000,
+      domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : 'localhost'
     });
     
     // Réponse
